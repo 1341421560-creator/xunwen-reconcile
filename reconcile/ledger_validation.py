@@ -1,4 +1,5 @@
 from .identity_dedup import identity
+from .invoice_difference import validate_difference
 
 
 class LedgerCorruptionError(ValueError):
@@ -43,6 +44,8 @@ def validate_ledger(ledger):
             else:
                 _require(type(row.get("red")) is bool and isinstance(row.get("invalid"), str), "发票异常状态无效")
                 _require(row["amount_cents"] >= 0 or row["red"], "负金额发票未标为红字")
+                if "difference" in row:
+                    validate_difference(row["difference"])
     bt, it = {}, {}
     for a in ledger["allocations"]:
         _require(a.get("bank_id") in maps["bank"] and a.get("invoice_id") in maps["invoices"], "关联记录引用不存在")

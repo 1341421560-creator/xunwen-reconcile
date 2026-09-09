@@ -11,7 +11,7 @@ def auto_match(ledger, config):
         if b["remaining_cents"] > 0 and not b["hold_reasons"] and not b["excluded_reason"] and b["party"]:
             bg[(party_key(b, ledger["settings"], True), b["currency"], b["remaining_cents"])].append(b)
     for i in invoices:
-        if i["remaining_cents"] > 0 and not i["hold_reasons"] and i["status"] != "review":
+        if i["distributable_cents"] > 0 and not i["hold_reasons"] and i["status"] != "review":
             ig[(party_key(i, ledger["settings"]), i["currency"], i["remaining_cents"])].append(i)
     blocked = {tuple(pair) for pair in ledger["blocked_pairs"]}
     created = []

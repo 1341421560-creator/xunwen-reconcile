@@ -11,6 +11,13 @@
   "session_dir": "sessions",
   "ledger_dir": "ledger",
   "temp_dir": "temp",
+  "difference_statuses": {
+    "none": "无差额记录",
+    "pending": "差额待确认",
+    "carry_forward": "已确认跨月使用",
+    "amount_error": "开票金额有误",
+    "cleared": "差额已用完"
+  },
   "company_name": "深圳市摩德瑞特科技有限公司",
   "exclude_keywords": ["工资", "缴税", "税款", "社保", "公积金", "网银服务年费", "网银证书服务年费"],
   "bank_layout_prefixes": ["交通银行", "开户机构", "账号：", "户名：", "出单截至日期", "承前", "承上页", "过次", "转下页", "当前账单", "本月累计", "----"],

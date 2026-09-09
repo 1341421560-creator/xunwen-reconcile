@@ -6,7 +6,7 @@ import {showBank,showInvoice,showLegacy} from './ledger-detail.js';
 
 export function createController(state){
  let importRevision=0,refreshAttempt=0;
- function setReady(enabled){for(const control of document.querySelectorAll('#import-open,#export-open,#month,#unfinished,#bank-search,#invoice-search,#invoice-filter,#settings-form input,#settings-form textarea,#settings-form button,[data-pager],[data-bank],[data-invoice]'))control.disabled=!enabled;}
+ function setReady(enabled){for(const control of document.querySelectorAll('#import-open,#export-open,#month,#unfinished,#bank-search,#invoice-search,#invoice-filter,#difference-filter,#settings-form input,#settings-form textarea,#settings-form button,[data-pager],[data-bank],[data-invoice]'))control.disabled=!enabled;}
  function apply(result){if(state.result&&result.company.id===state.result.company.id&&result.revision<state.result.revision)return;state.result=result;setReady(true);if(state.month&&!result.months.includes(state.month))state.month='';renderLedger(state);renderConflicts(state,mutate);}
  async function refresh(initial=false){const attempt=++refreshAttempt;try{const data=await request('/api/bootstrap');if(attempt!==refreshAttempt)return;state.labels=data.statuses;state.history=data.history;if(initial)state.month=data.result.months[0]||'';apply(data.result);if(data.migration_required)message('旧数据尚未迁移，请先运行迁移脚本。当前账本暂不接收导入。',true);}catch(error){if(attempt!==refreshAttempt)return;setReady(false);throw error;}}
  async function mutate(path,payload,close=true){const result=await request(path,payload);if(close&&el('detail-dialog').open)el('detail-dialog').close();apply(result);message('已保存到账本，金额进度已更新。');}
@@ -25,7 +25,7 @@ export function createController(state){
   el('refresh').onclick=async()=>{try{await refresh();message('已读取最新账本。');}catch(error){message(error.message,true);}};
   el('month').onchange=()=>{state.month=el('month').value;state.bankPage=0;renderLedger(state);};
   el('unfinished').onchange=()=>{state.unfinished=el('unfinished').checked;state.filter='all';state.bankPage=0;renderLedger(state);};
-  for(const [id,key] of [['bank-search','bankSearch'],['invoice-search','invoiceSearch'],['invoice-filter','invoiceFilter']])el(id).addEventListener(id==='invoice-filter'?'change':'input',()=>{state[key]=el(id).value;state[id.startsWith('bank')?'bankPage':'invoicePage']=0;renderTables(state);});
+  for(const [id,key] of [['bank-search','bankSearch'],['invoice-search','invoiceSearch'],['invoice-filter','invoiceFilter'],['difference-filter','differenceFilter']])el(id).addEventListener(id.endsWith('-filter')?'change':'input',()=>{state[key]=el(id).value;state[id.startsWith('bank')?'bankPage':'invoicePage']=0;renderTables(state);});
   el('import-open').onclick=openImport;
   el('import-form').onsubmit=async e=>{e.preventDefault();el('import-submit').disabled=true;el('import-error').textContent='';try{
    const payload={revision:importRevision};for(const [key,id] of [['bank','bank-file'],['invoice','invoice-file']]){const file=el(id).files[0];if(file)payload[key]=await readUpload(file);}if(!payload.bank&&!payload.invoice)throw new Error('请至少选择一份流水或进项发票清单');

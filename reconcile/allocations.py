@@ -33,6 +33,8 @@ def allocate(ledger, payload, config):
             raise ValueError("该流水不参与比对，请先调整分类")
         if b["hold_reasons"] or i["hold_reasons"] or i["status"] == "review":
             raise ValueError("存在红字、异常或冲突待复核，须先核对；已有关系需先撤回再重新分配")
+        if i["difference_blocked"]:
+            raise ValueError("发票差额待确认或开票金额有误，剩余金额暂停分配；请先在发票详情确认差额状态")
         if b["currency"] != i["currency"]:
             raise ValueError("币种不同，不能分配")
         pair = (b["id"], i["id"])

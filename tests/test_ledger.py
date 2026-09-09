@@ -107,6 +107,7 @@ class LedgerTests(unittest.TestCase):
         self.allocate([row])
         with self.assertRaisesRegex(ValueError, "版本"):
             self.allocate([row], revision=result["revision"])
+        self.service.invoice_difference({"revision": self.load()["revision"], "invoice_id": row["invoice_id"], "status": "carry_forward", "note": "确认剩余金额继续分批使用"})
         with self.assertRaisesRegex(ValueError, "重复"):
             self.allocate([dict(row, amount_cents=50000), dict(row, amount_cents=50000)])
         self.assertEqual(self.load()["bank"][0]["allocated_cents"], 100000)
@@ -285,6 +286,7 @@ class LedgerTests(unittest.TestCase):
         row = {k: a[k] for k in ("bank_id", "invoice_id")}
         result = self.allocate([dict(row, amount_cents=500000)])
         self.assertEqual(result["bank"][0]["allocated_cents"], 500000)
+        self.service.invoice_difference({"revision": result["revision"], "invoice_id": row["invoice_id"], "status": "carry_forward", "note": "确认剩余金额继续分批使用"})
         result = self.allocate([dict(row, amount_cents=700000)])
         self.assertEqual(result["bank"][0]["status"], "matched")
 

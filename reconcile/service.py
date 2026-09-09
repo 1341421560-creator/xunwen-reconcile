@@ -12,6 +12,7 @@ from .ledger_rules import update_rules
 from .ledger_export import export_ledger
 from .legacy_service import ReconciliationService as LegacyService
 from .input_validation import month_field, boolean_field
+from .invoice_difference import update_difference
 
 
 class ReconciliationService:
@@ -70,6 +71,9 @@ class ReconciliationService:
 
     def undo(self, payload):
         return self.mutate(payload, revoke)
+
+    def invoice_difference(self, payload):
+        return self.mutate(payload, update_difference)
 
     def settings(self, payload):
         return self.mutate(payload, update_rules, True)

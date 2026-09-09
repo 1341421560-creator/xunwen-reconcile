@@ -94,6 +94,8 @@ class BusinessFaults(FaultCase):
             elif available_b and available_i:
                 b, i = randomizer.choice(available_b), randomizer.choice(available_i)
                 amount = randomizer.randint(1, min(b["remaining_cents"], i["remaining_cents"]))
+                if i["difference_blocked"]:
+                    self.service.invoice_difference({"revision": view["revision"], "invoice_id": i["id"], "status": "carry_forward", "note": "随机序列确认剩余差额可继续使用"})
                 updated = self.allocate([dict(bank_id=b["id"], invoice_id=i["id"], amount_cents=amount)])
                 a = updated["allocations"][-1]
                 oracle[a["id"]] = (b["id"], i["id"], amount)

@@ -8,6 +8,7 @@ from .ledger_validation import LedgerCorruptionError
 from .normalize import name_key
 from .resource_lock import resource_mutex
 from .atomic_write import replace_snapshot
+from .invoice_difference import synchronize_differences
 
 
 class LedgerStore:
@@ -66,6 +67,7 @@ class LedgerStore:
                 raise ValueError("账本公司与当前配置不符")
         except (ValueError, TypeError, KeyError, AttributeError) as exc:
             raise LedgerCorruptionError("账本校验失败，已停止读写且未重建或覆盖原文件。请保留当前文件并核对备份。原因：" + str(exc)) from exc
+        synchronize_differences(ledger)
         return ledger
 
     def commit(self, ledger, expected_revision):
@@ -73,6 +75,7 @@ class LedgerStore:
             actual = self.load()["revision"]
             if type(expected_revision) is not int or actual != expected_revision:
                 raise ValueError("账本已更新，当前页面版本过期。请刷新后重新核对并提交")
+            synchronize_differences(ledger, audit=True)
             ledger["revision"] = actual + 1
             ledger["saved_at"] = timestamp()
             validate_ledger(ledger)

@@ -1,1 +1,1 @@
-export function createState(){return {result:null,labels:{},history:[],page:'bank',month:'',unfinished:false,filter:'all',bankSearch:'',invoiceSearch:'',invoiceFilter:'all',bankPage:0,invoicePage:0,pageSize:15};}
+export function createState(){return {result:null,labels:{},history:[],page:'bank',month:'',unfinished:false,filter:'all',bankSearch:'',invoiceSearch:'',invoiceFilter:'all',differenceFilter:'all',bankPage:0,invoicePage:0,pageSize:15};}

@@ -92,6 +92,7 @@ def make_server(service, host, port):
                     raise ValueError("请求内容未传输完整，请重新提交")
                 payload = json_object(content)
                 actions = {"/api/import": service.import_files, "/api/review": service.review, "/api/undo": service.undo, "/api/settings": service.settings, "/api/export": service.export, "/api/restore": service.restore, "/api/ledger": service.ledger, "/api/conflict": service.resolve, "/api/exception": service.exception, "/api/exclusion": service.exclusion}
+                actions["/api/invoice-difference"] = service.invoice_difference
                 action = actions.get(self.path)
                 if not action:
                     return self.respond({"error": "接口不存在"}, 404)

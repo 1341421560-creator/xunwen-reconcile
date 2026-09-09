@@ -74,6 +74,20 @@ class HttpFaults(FaultCase):
         self.assertEqual(self.call("/api/missing", {})[0], 404)
         self.assertEqual(self.call("/api/import", {}, method="PUT")[0], 501)
 
+    def test_invoice_difference_route_and_stale_guard(self):
+        view = self.ledger()
+        iid = view["invoices"][0]["id"]
+        self.allocate([dict(bank_id=view["bank"][0]["id"], invoice_id=iid, amount_cents=1200000)])
+        payload = dict(revision=self.ledger()["revision"], invoice_id=iid, status="carry_forward", note="确认下月使用")
+        code, body, _ = self.call("/api/invoice-difference", payload)
+        self.assertEqual(code, 200, body)
+        result = json.loads(body)
+        self.assertEqual(result["invoices"][0]["distributable_cents"], 100000)
+        self.assertEqual(len(result["allocations"]), 1)
+        before = self.saved()
+        self.assertEqual(self.call("/api/invoice-difference", payload)[0], 400)
+        self.assertEqual(self.saved(), before)
+
     def test_duplicate_json_keys_rejected(self):
         raw = b'{"revision":1,"revision":1,"aliases":{},"exclude_special":false}'
         before = self.saved()

@@ -1,6 +1,7 @@
 from collections import defaultdict, deque
 from copy import deepcopy
 from .ledger_model import party_key
+from .invoice_difference import describe_difference
 
 
 def progress(ledger, config):
@@ -66,12 +67,16 @@ def progress(ledger, config):
     for i in invoices:
         if i["hold_reasons"]:
             i["status"] = "review"
+        i.update(describe_difference(i, i["allocated_cents"], ledger.get("saved_at")))
     eligible_by_party, eligible_by_amount = defaultdict(list), defaultdict(list)
     for i in invoices:
-        if i["remaining_cents"] > 0 and not i["hold_reasons"] and i["status"] != "review":
+        if i["distributable_cents"] > 0 and not i["hold_reasons"] and i["status"] != "review":
             eligible_by_party[(party_key(i, ledger["settings"]), i["currency"])].append(i["id"])
             eligible_by_amount[(i["currency"], i["remaining_cents"])].append(i["id"])
     for b in banks:
+        b["difference_invoice_ids"] = [iid for iid in b["invoice_ids"] if im[iid]["difference_blocked"]]
+        b["difference_pending_cents"] = sum(im[iid]["difference_cents"] for iid in b["difference_invoice_ids"])
+        b["difference_hint"] = ("关联发票差额 " + format(b["difference_pending_cents"] / 100, ",.2f") + " 元待处理（发票全额差额，勿重复汇总）") if b["difference_invoice_ids"] else ""
         same = eligible_by_party.get((party_key(b, ledger["settings"], True), b["currency"]), []) if b["party"] else []
         equal = eligible_by_amount.get((b["currency"], b["remaining_cents"]), [])
         b["candidate_ids"] = list(dict.fromkeys(same[:config["max_suggestions"]] + equal[:config["max_suggestions"]]))[:config["max_suggestions"]]
@@ -114,4 +119,5 @@ def ledger_view(ledger, config, month="", unfinished=False):
                 months=sorted({b["date"][:7] for b in banks}, reverse=True), stats=statistics(banks, invoices, config),
                 filtered_stats=statistics(filtered, invoices, config), batches=ledger["batches"],
                 allocations=ledger["allocations"], conflicts=ledger["conflicts"], audit=ledger["audit"],
-                settings=ledger["settings"], saved_at=ledger["saved_at"], schema_version=ledger["schema_version"])
+                settings=ledger["settings"], saved_at=ledger["saved_at"], schema_version=ledger["schema_version"],
+                difference_labels=config["difference_statuses"])
