@@ -1,0 +1,24 @@
+# 本机账本、业务附件和测试产物不进入版本库。
+/ledger/
+/sessions/
+/reports/
+/backups/
+/data-transfer/
+/temp/
+/output/
+/config/local.json
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+*.log
+*.xls
+*.xlsx
+*.csv
+*.zip
+# 离线运行包必须随代码一起提交。
+!/downloads/python-3.12.10-embed-amd64.zip
+Thumbs.db
+Desktop.ini
+.DS_Store
