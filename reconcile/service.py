@@ -13,6 +13,10 @@ from .ledger_export import export_ledger
 from .legacy_service import ReconciliationService as LegacyService
 from .input_validation import month_field, boolean_field
 from .invoice_difference import update_difference
+from .bank_notes import update_bank_note
+from .expense_categories import update_expense_category
+from .expense_statistics import expense_statistics
+from .review_reversal import reverse_conflict, reverse_exception
 
 
 class ReconciliationService:
@@ -77,6 +81,21 @@ class ReconciliationService:
 
     def settings(self, payload):
         return self.mutate(payload, update_rules, True)
+
+    def bank_note(self, payload):
+        return self.mutate(payload, lambda ledger, data: update_bank_note(ledger, data, self.config))
+
+    def expense_category(self, payload):
+        return self.mutate(payload, lambda ledger, data: update_expense_category(ledger, data, self.config["expense_categories"]))
+
+    def expense_statistics(self, payload):
+        return expense_statistics(self.store.load(), self.config["expense_categories"], payload)
+
+    def reverse_conflict(self, payload):
+        return self.mutate(payload, reverse_conflict)
+
+    def reverse_exception(self, payload):
+        return self.mutate(payload, reverse_exception)
 
     def exclusion(self, payload):
         return self.mutate(payload, set_exclusion)

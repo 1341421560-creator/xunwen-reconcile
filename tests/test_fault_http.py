@@ -45,6 +45,24 @@ class HttpFaults(FaultCase):
             with self.subTest(header=header):
                 self.assertEqual(self.call(headers=header)[0], 403)
 
+    def test_bank_notes_expense_statistics_and_reversal_routes(self):
+        view = self.ledger()
+        bid = view["bank"][0]["id"]
+        status, body, _ = self.call("/api/bank-note", {"revision": view["revision"], "bank_id": bid, "note": "网页手工备注"})
+        self.assertEqual(status, 200, body)
+        view = json.loads(body)
+        status, body, _ = self.call("/api/expense-category", {"revision": view["revision"], "bank_id": bid, "category": "logistics"})
+        self.assertEqual(status, 200, body)
+        before = self.saved()
+        status, body, _ = self.call("/api/expense-statistics", {"start_date": "2026-08-01", "end_date": "2026-08-31"})
+        self.assertEqual(status, 200, body)
+        self.assertEqual(json.loads(body)["categories"][1]["debit_cents"], 1200000)
+        self.assertEqual(self.saved(), before)
+        for route in ("/api/conflict-undo", "/api/exception-undo"):
+            status, body, _ = self.call(route, {"revision": self.ledger()["revision"], "note": "不存在的复核记录"})
+            self.assertEqual(status, 400, body)
+        self.assertEqual(self.saved(), before)
+
     def test_path_traversal_never_exposes_ledger(self):
         for route in ("/../ledger/company-ledger.v1.json", "/%2e%2e/ledger/company-ledger.v1.json", "/reports/../../ledger/company-ledger.v1.json", "/%5c..%5cledger%5ccompany-ledger.v1.json"):
             with self.subTest(route=route):
@@ -92,6 +110,23 @@ class HttpFaults(FaultCase):
         raw = b'{"revision":1,"revision":1,"aliases":{},"exclude_special":false}'
         before = self.saved()
         self.assertEqual(self.call("/api/settings", raw=raw)[0], 400)
+        self.assertEqual(self.saved(), before)
+
+    def test_custom_summary_keywords_api_normalization_and_compatibility(self):
+        payload = {"revision": self.ledger()["revision"], "aliases": {}, "exclude_special": False,
+                   "custom_exclude_keywords": ["  货款  ", "", "货款"]}
+        status, body, _ = self.call("/api/settings", payload)
+        self.assertEqual(status, 200, body)
+        view = json.loads(body)
+        self.assertEqual(view["settings"]["custom_exclude_keywords"], ["货款"])
+        self.assertEqual(view["bank"][0]["reason"], "自定义摘要命中：货款")
+        old_payload = {"revision": view["revision"], "aliases": {}, "exclude_special": True}
+        status, body, _ = self.call("/api/settings", old_payload)
+        self.assertEqual(status, 200, body)
+        self.assertEqual(json.loads(body)["settings"]["custom_exclude_keywords"], ["货款"])
+        before = self.saved()
+        bad_payload = dict(old_payload, revision=self.ledger()["revision"], custom_exclude_keywords="货款")
+        self.assertEqual(self.call("/api/settings", bad_payload)[0], 400)
         self.assertEqual(self.saved(), before)
 
     def test_corrupt_ledger_get_returns_json_and_does_not_drop_connection(self):

@@ -24,11 +24,23 @@ def resolve_conflict(ledger, payload):
         replacement.update({k: old[k] for k in ("id", "company_id", "first_batch_id", "created_at")})
         replacement["sources"] = old["sources"] + conflict["sources"]
         replacement["record_version"] = old.get("record_version", 0) + 1
+        if conflict["kind"] == "bank":
+            for field in ("manual_note", "manual_note_updated_at", "expense_classification"):
+                if field in old:
+                    replacement[field] = old[field]
         old.clear()
         old.update(replacement)
+        conflict["resolved_record_version"] = replacement["record_version"]
     elif action == "new" and conflict["type"] == "missing_reference":
-        item = add_record(ledger, conflict["incoming"], conflict["kind"], conflict["batch_id"])
-        item["sources"] = deepcopy(conflict["sources"])
+        previous = next((h for h in reversed(conflict.get("reversal_history", [])) if h.get("withdrawn_record")), None)
+        if previous:
+            item = deepcopy(previous["withdrawn_record"])
+            ledger["bank"].append(item)
+            ledger["allocations"].extend(deepcopy(previous["withdrawn_allocations"]))
+            ledger["blocked_pairs"].extend(deepcopy(previous["withdrawn_pairs"]))
+        else:
+            item = add_record(ledger, conflict["incoming"], conflict["kind"], conflict["batch_id"])
+            item["sources"] = deepcopy(conflict["sources"])
         conflict["accepted_record_id"] = item["id"]
     else:
         raise ValueError("核对操作不适用于当前冲突")

@@ -7,6 +7,16 @@
   "request_timeout_seconds": 15,
   "max_subset_items": 12,
   "max_suggestions": 20,
+  "manual_note_max_length": 2000,
+  "invoice_notice_sources": {"active": "已关联发票", "revoked": "曾关联发票", "same_party": "同公司发票"},
+  "invoice_notice_blocked_reason": "相关发票已导入，当前暂停分配",
+  "expense_categories": [
+    {"id": "goods", "label": "货款", "keywords": ["货款", "采购"]},
+    {"id": "logistics", "label": "物流", "keywords": ["物流", "运费", "快递", "运输费"]},
+    {"id": "labor", "label": "人工", "keywords": ["人工", "工资", "劳务", "薪资"]},
+    {"id": "utilities", "label": "水电费", "keywords": ["水电", "水费", "电费"]},
+    {"id": "other", "label": "其他支出", "keywords": []}
+  ],
   "report_dir": "reports",
   "session_dir": "sessions",
   "ledger_dir": "ledger",

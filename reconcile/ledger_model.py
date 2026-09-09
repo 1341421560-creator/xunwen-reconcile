@@ -8,7 +8,7 @@ def new_ledger(company_name):
             "company": {"id": identifier("C"), "name": company_name, "accounts": []},
             "created_at": timestamp(), "saved_at": None, "bank": [], "invoices": [],
             "batches": [], "allocations": [], "conflicts": [], "blocked_pairs": [],
-            "audit": [], "migrations": [], "settings": {"exclude_special": True, "aliases": {}}}
+            "audit": [], "migrations": [], "settings": {"exclude_special": True, "aliases": {}, "custom_exclude_keywords": []}}
 
 
 def party_key(record, settings, bank=False):

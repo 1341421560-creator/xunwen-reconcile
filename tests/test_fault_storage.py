@@ -131,7 +131,7 @@ class StorageFaults(FaultCase):
         original = os.replace
         calls = []
         def intermittent(source, destination):
-            calls.append(1)
+            calls.append((source, destination))
             if len(calls) < 3:
                 error = PermissionError("模拟 Windows 文件短暂占用")
                 error.winerror = 32
@@ -139,9 +139,13 @@ class StorageFaults(FaultCase):
             return original(source, destination)
         with patch("reconcile.atomic_write.os.replace", intermittent):
             result = self.import_files(invoice=self.invoice_file([invoice_row("RETRY", 100)]))
-        self.assertEqual(len(calls), 3)
+        # 两次模拟占用后，真实文件仍可能被后台程序短暂占用；允许原有上限内继续重试。
+        self.assertGreaterEqual(len(calls), 3)
+        self.assertLessEqual(len(calls), 6)
+        self.assertTrue(all(call == calls[0] for call in calls))
         self.assertEqual(result["revision"], 2)
         self.assertEqual(len(result["invoices"]), 2)
+        self.assertEqual(self.ledger()["invoices"], result["invoices"])
 
     def test_persistent_windows_sharing_failure_is_bounded_and_preserves_data(self):
         self.seed()

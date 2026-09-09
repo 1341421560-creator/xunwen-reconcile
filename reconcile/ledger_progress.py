@@ -2,13 +2,20 @@ from collections import defaultdict, deque
 from copy import deepcopy
 from .ledger_model import party_key
 from .invoice_difference import describe_difference
+from .summary_exclusions import summary_rule_groups, exclusion_reason
+from .expense_categories import describe_expense
+from .invoice_notices import annotate_invoice_notices
 
 
 def progress(ledger, config):
     banks, invoices = deepcopy(ledger["bank"]), deepcopy(ledger["invoices"])
+    summary_rules = summary_rule_groups(ledger["settings"], config)
     bm, im = {r["id"]: r for r in banks}, {r["id"]: r for r in invoices}
     for row in banks + invoices:
         row.update(allocated_cents=0, allocation_ids=[], hold_reasons=[], candidate_ids=[])
+    for rows, is_bank in ((banks, True), (invoices, False)):
+        for row in rows:
+            row["party_match_key"] = party_key(row, ledger["settings"], is_bank)
     for a in ledger["allocations"]:
         if a["state"] == "active":
             for row in (bm[a["bank_id"]], im[a["invoice_id"]]):
@@ -29,15 +36,10 @@ def progress(ledger, config):
         i["bank_ids"] = []
         i["status"] = "review" if i["hold_reasons"] else ("matched" if i["remaining_cents"] == 0 else "partial" if i["allocated_cents"] else "unmatched")
     for b in banks:
+        b.update(describe_expense(b, config["expense_categories"]))
         b["remaining_cents"] = b["amount_cents"] - b["allocated_cents"]
         b["invoice_ids"] = []
-        b["excluded_reason"] = b.get("manual_exclusion", "")
-        if b["direction"] == "收入":
-            b["excluded_reason"] = "收入不参与进项发票比对"
-        elif not b["allocated_cents"] and ledger["settings"].get("exclude_special", True):
-            hit = next((w for w in config["exclude_keywords"] if w in b["summary"]), None)
-            if hit:
-                b["excluded_reason"] = "摘要命中：" + hit
+        b["excluded_reason"] = exclusion_reason(b, b["allocated_cents"], summary_rules)
         if not b["excluded_reason"]:
             exception_ids = exceptions.get((party_key(b, ledger["settings"], True), b["currency"]), [])
             if exception_ids:
@@ -93,6 +95,7 @@ def progress(ledger, config):
             b.update(status="review", reason="存在候选，金额不等或有多笔同额记录，需要人工确认")
         else:
             b.update(status="unmatched", reason="累计账本暂未找到对应发票")
+    annotate_invoice_notices(banks, invoices, ledger["allocations"], ledger["audit"], config)
     return banks, invoices
 
 
@@ -120,4 +123,5 @@ def ledger_view(ledger, config, month="", unfinished=False):
                 filtered_stats=statistics(filtered, invoices, config), batches=ledger["batches"],
                 allocations=ledger["allocations"], conflicts=ledger["conflicts"], audit=ledger["audit"],
                 settings=ledger["settings"], saved_at=ledger["saved_at"], schema_version=ledger["schema_version"],
-                difference_labels=config["difference_statuses"])
+                difference_labels=config["difference_statuses"], manual_note_max_length=config["manual_note_max_length"],
+                expense_categories=config["expense_categories"])

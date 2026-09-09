@@ -93,6 +93,11 @@ def make_server(service, host, port):
                 payload = json_object(content)
                 actions = {"/api/import": service.import_files, "/api/review": service.review, "/api/undo": service.undo, "/api/settings": service.settings, "/api/export": service.export, "/api/restore": service.restore, "/api/ledger": service.ledger, "/api/conflict": service.resolve, "/api/exception": service.exception, "/api/exclusion": service.exclusion}
                 actions["/api/invoice-difference"] = service.invoice_difference
+                actions["/api/bank-note"] = service.bank_note
+                actions["/api/expense-category"] = service.expense_category
+                actions["/api/expense-statistics"] = service.expense_statistics
+                actions["/api/conflict-undo"] = service.reverse_conflict
+                actions["/api/exception-undo"] = service.reverse_exception
                 action = actions.get(self.path)
                 if not action:
                     return self.respond({"error": "接口不存在"}, 404)

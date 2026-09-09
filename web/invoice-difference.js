@@ -1,3 +1,4 @@
+import {renderRelations} from './allocation-relations.js';
 import {escape as esc,money} from './format.js';
 
 const editableStatuses=['pending','carry_forward','amount_error'];
@@ -30,14 +31,10 @@ export function differenceEditor(container,invoice,view,onMutation){
 
 export function renderDifferences(container,view,onMutation){
  const pending=view.invoices.filter(i=>i.difference_blocked);
- container.innerHTML=pending.map(i=>`<article class="conflict-card difference-card"><strong>${esc(i.party)} · 差额 ${money(i.difference_cents)} 元</strong><p class="compact-text">${esc(i.date)} · ${esc(i.number)}</p><button class="text-button" data-invoice="${esc(i.id)}">查看发票与关联</button><div data-difference-editor="${esc(i.id)}"></div></article>`).join('')||'<p class="muted">没有待处理的发票差额</p>';
+ container.innerHTML=pending.map(i=>`<article class="conflict-card difference-card"><strong>${esc(i.party)} · 未分配余额 ${money(i.remaining_cents)} 元</strong><p class="compact-text">${esc(i.date)} · ${esc(i.number)}</p><button class="text-button" data-invoice="${esc(i.id)}">查看发票与关联</button><div data-difference-editor="${esc(i.id)}"></div><div data-difference-relations="${esc(i.id)}" class="review-relations"></div></article>`).join('')||'<p class="muted">没有待处理的发票差额</p>';
+ for(const target of container.querySelectorAll('[data-difference-relations]'))renderRelations(target,view,view.allocations.filter(a=>a.invoice_id===target.dataset.differenceRelations),(path,payload)=>onMutation(path,payload,false));
  const invoices=new Map(pending.map(i=>[i.id,i]));
  for(const target of container.querySelectorAll('[data-difference-editor]'))differenceEditor(target,invoices.get(target.dataset.differenceEditor),view,(path,payload)=>onMutation(path,payload,false));
-}
-
-export function bankDifferenceHint(bank){
- if(!bank.difference_hint)return '';
- return `<span class="subtext balance-warning">${esc(bank.difference_hint)}</span>`;
 }
 
 export function differencePreview(invoice,allocated,view){

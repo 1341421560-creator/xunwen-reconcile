@@ -1,5 +1,8 @@
 from .identity_dedup import identity
 from .invoice_difference import validate_difference
+from .summary_exclusions import normalize_keywords
+from .bank_notes import validate_bank_note
+from .expense_categories import validate_expense_override
 
 
 class LedgerCorruptionError(ValueError):
@@ -21,6 +24,7 @@ def validate_ledger(ledger):
     settings = ledger.get("settings")
     _require(isinstance(settings, dict) and isinstance(settings.get("aliases"), dict) and type(settings.get("exclude_special")) is bool, "账本规则结构无效")
     _require(all(isinstance(k, str) and isinstance(v, str) and k.strip() and v.strip() for k, v in settings["aliases"].items()), "账本名称映射无效")
+    normalize_keywords(settings.get("custom_exclude_keywords", []))
     maps = {}
     for kind in ("bank", "invoices", "allocations", "conflicts", "batches", "audit"):
         mapping = {}
@@ -38,6 +42,8 @@ def validate_ledger(ledger):
                 _require(key not in identities, "账本存在重复金融记录标识")
                 identities.add(key)
             if kind == "bank":
+                validate_bank_note(row)
+                validate_expense_override(row)
                 debit, credit = row.get("debit_cents"), row.get("credit_cents")
                 _require(type(debit) is int and type(credit) is int and debit >= 0 and credit >= 0 and debit+credit == row["amount_cents"] and row["amount_cents"] > 0, "付款原金额与借贷金额不一致")
                 _require((row.get("direction") == "支出" and debit > 0 and credit == 0) or (row.get("direction") == "收入" and credit > 0 and debit == 0), "付款方向无效")

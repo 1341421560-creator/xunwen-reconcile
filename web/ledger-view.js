@@ -1,5 +1,8 @@
 import {escape as esc,money,el} from './format.js';
-import {differenceSummary,bankDifferenceHint} from './invoice-difference.js';
+import {differenceSummary} from './invoice-difference.js';
+import {bankInvoiceNotices} from './bank-invoice-notices.js';
+import {noteCell} from './bank-note-editor.js';
+import {renderSummaryKeywords} from './summary-keywords-editor.js';
 export const badge=(row,labels)=>`<span class="badge ${esc(row.status)}">${esc(labels[row.status])}</span>`;
 export function message(text,error=false){el('message').textContent=text;el('message').classList.toggle('error',error);el('message').hidden=!text;}
 export function page(state,name){state.page=name;for(const section of document.querySelectorAll('main section'))section.hidden=section.id!==`page-${name}`;for(const button of document.querySelectorAll('[data-page]'))button.classList.toggle('active',button.dataset.page===name);}
@@ -10,9 +13,9 @@ export function renderTables(state){
  const r=state.result,scope=scopedBanks(state),counts={};for(const key of Object.keys(state.labels))counts[key]=scope.filter(b=>b.status===key).length;
  el('metrics').innerHTML=Object.entries(state.labels).map(([key,label])=>`<button class="metric" data-filter="${key}"><span class="metric-label">${esc(label)}</span><div class="metric-value">${counts[key]}<small>笔</small></div><div class="metric-amount">支出 ${money(scope.filter(b=>b.status===key).reduce((s,b)=>s+b.debit_cents,0))}</div></button>`).join('');
  el('status-tabs').innerHTML=[['all','全部'],...Object.entries(state.labels)].map(([k,v])=>`<button data-filter="${k}" class="tab ${state.filter===k?'active':''}">${esc(v)} <span>${k==='all'?scope.length:counts[k]}</span></button>`).join('');
- let banks=scope.filter(b=>(state.filter==='all'||b.status===state.filter)&&[b.party,b.summary,b.reference,b.id,b.date].join(' ').toLowerCase().includes(state.bankSearch.toLowerCase()));
+ let banks=scope.filter(b=>(state.filter==='all'||b.status===state.filter)&&[b.party,b.summary,b.manual_note||'',b.reference,b.id,b.date].join(' ').toLowerCase().includes(state.bankSearch.toLowerCase()));
  const bp=paginate(banks,state.bankPage,state.pageSize);state.bankPage=bp.index;pager('bank',bp);
- el('bank-table').innerHTML=bp.rows.map(b=>`<tr><td>${esc(b.date)}<span class="subtext">${esc(b.direction)}</span></td><td class="party">${esc(b.party||'银行费用')}<span class="subtext">${esc(b.summary)}</span></td><td class="number">${money(b.amount_cents)}</td><td class="number">${money(b.allocated_cents)}<span class="muted-amount">剩余 ${money(b.remaining_cents)}</span></td><td>${badge(b,state.labels)}<span class="subtext">${esc(b.reason)}</span>${bankDifferenceHint(b)}</td><td><button class="text-button" data-bank="${esc(b.id)}">核对</button></td></tr>`).join('')||'<tr><td colspan="6" class="empty-row">此视图暂无流水。可追加导入文件，或切换付款月份。</td></tr>';
+ el('bank-table').innerHTML=bp.rows.map(b=>`<tr><td>${esc(b.date)}<span class="subtext">${esc(b.direction)}</span></td><td class="party">${esc(b.party||'银行费用')}<span class="subtext">${esc(b.summary)}</span></td><td class="number">${money(b.amount_cents)}</td><td class="number">${money(b.allocated_cents)}<span class="muted-amount">剩余 ${money(b.remaining_cents)}</span></td><td>${badge(b,state.labels)}<span class="subtext">${esc(b.reason)}</span>${bankInvoiceNotices(b)}</td>${noteCell(b)}<td><button class="text-button" data-bank="${esc(b.id)}">核对</button></td></tr>`).join('')||'<tr><td colspan="7" class="empty-row">此视图暂无流水。可追加导入文件，或切换付款月份。</td></tr>';
  const invoices=r.invoices.filter(i=>[i.party,i.number,i.date,i.id].join(' ').toLowerCase().includes(state.invoiceSearch.toLowerCase())&&(state.invoiceFilter==='all'||state.invoiceFilter==='available'&&i.distributable_cents>0||state.invoiceFilter==='used'&&i.allocated_cents>0||state.invoiceFilter==='review'&&i.status==='review')&&(state.differenceFilter==='all'||i.difference_status===state.differenceFilter));
  const ip=paginate(invoices,state.invoicePage,state.pageSize);state.invoicePage=ip.index;pager('invoice',ip);
  el('invoice-table').innerHTML=ip.rows.map(i=>`<tr><td>${esc(i.date)}</td><td class="party">${esc(i.party)}<span class="subtext monospace">${esc(i.number)}</span></td><td class="number">${money(i.amount_cents)}</td><td class="number">${money(i.allocated_cents)}</td><td class="number">${money(i.remaining_cents)}<span class="muted-amount">可分配 ${money(i.distributable_cents)}</span></td><td>${badge(i,state.labels)}<span class="subtext">${esc(i.hold_reasons.join('；'))}</span></td><td class="difference-cell">${differenceSummary(i,r)}</td><td><button class="text-button" data-invoice="${esc(i.id)}">详情</button></td></tr>`).join('')||'<tr><td colspan="8" class="empty-row">暂无符合条件的发票</td></tr>';
@@ -27,6 +30,7 @@ export function renderLedger(state){
  el('month').innerHTML='<option value="">全部月份</option>'+r.months.map(m=>`<option value="${m}">${m}</option>`).join('');el('month').value=state.month;el('month').disabled=state.unfinished;el('unfinished').checked=state.unfinished;
  el('scope-info').textContent=state.unfinished?'全部历史未完成付款':`${state.month||'全部月份'}付款的最新进度`;
  el('ledger-total').textContent=`全账本 ${r.stats.bank_count} 笔流水 · ${r.stats.invoice_count} 张发票 · 有效核销 ${money(r.stats.allocated_cents)} 元 · 待核对余额 ${money(r.stats.outstanding_cents)} 元`;
+ renderSummaryKeywords(el('summary-keywords-editor'),r.settings);
  el('exclude-special').checked=r.settings.exclude_special;el('aliases').value=Object.entries(r.settings.aliases).map(([k,v])=>`${k} = ${v}`).join('\n');
  renderTables(state);renderHistory(state);
 }
