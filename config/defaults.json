@@ -8,6 +8,7 @@
   "max_subset_items": 12,
   "max_suggestions": 20,
   "manual_note_max_length": 2000,
+  "invoice_page_size": 100,
   "invoice_notice_sources": {"active": "已关联发票", "revoked": "曾关联发票", "same_party": "同公司发票"},
   "invoice_notice_blocked_reason": "相关发票已导入，当前暂停分配",
   "expense_categories": [
@@ -15,6 +16,10 @@
     {"id": "logistics", "label": "物流", "keywords": ["物流", "运费", "快递", "运输费"]},
     {"id": "labor", "label": "人工", "keywords": ["人工", "工资", "劳务", "薪资"]},
     {"id": "utilities", "label": "水电费", "keywords": ["水电", "水费", "电费"]},
+    {"id": "tax", "label": "缴税", "keywords": ["缴税"], "priority": 1},
+    {"id": "operations", "label": "运营", "keywords": ["代运营服务"], "priority": 1},
+    {"id": "reimbursement", "label": "报销款", "keywords": ["报销款"], "priority": 1},
+    {"id": "rent", "label": "租金", "keywords": ["租金"], "priority": 1},
     {"id": "other", "label": "其他支出", "keywords": []}
   ],
   "report_dir": "reports",
@@ -29,6 +34,12 @@
     "cleared": "差额已用完"
   },
   "company_name": "深圳市摩德瑞特科技有限公司",
+  "companies": [
+    {"key": "haisi", "label": "海思", "name_hint": "请填写海思的完整公司名称"},
+    {"key": "moderate", "label": "摩德瑞特", "name_hint": "深圳市摩德瑞特科技有限公司"},
+    {"key": "dongguan_xunwen", "label": "东莞循文", "name_hint": "请填写东莞循文的完整公司名称"},
+    {"key": "huachuangxing", "label": "华创星", "name_hint": "请填写华创星的完整公司名称"}
+  ],
   "exclude_keywords": ["工资", "缴税", "税款", "社保", "公积金", "网银服务年费", "网银证书服务年费"],
   "bank_layout_prefixes": ["交通银行", "开户机构", "账号：", "户名：", "出单截至日期", "承前", "承上页", "过次", "转下页", "当前账单", "本月累计", "----"],
   "bank_columns": {

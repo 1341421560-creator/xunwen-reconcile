@@ -17,6 +17,7 @@ from .bank_notes import update_bank_note
 from .expense_categories import update_expense_category
 from .expense_statistics import expense_statistics
 from .review_reversal import reverse_conflict, reverse_exception
+from .invoice_selection import update_invoice_selection
 
 
 class ReconciliationService:
@@ -24,7 +25,7 @@ class ReconciliationService:
         self.root = Path(root)
         self.config = config
         self.lock = RLock()
-        self.store = LedgerStore(self.root / config["ledger_dir"], self.root / config["temp_dir"], config["company_name"])
+        self.store = LedgerStore(self.root / config["ledger_dir"], self.root / config["temp_dir"], config["company_name"], config.get("company_key"))
         self.legacy = LegacyService(root, config)
 
     def ledger(self, payload=None):
@@ -79,6 +80,9 @@ class ReconciliationService:
     def invoice_difference(self, payload):
         return self.mutate(payload, update_difference)
 
+    def invoice_selection(self, payload):
+        return self.mutate(payload, update_invoice_selection)
+
     def settings(self, payload):
         return self.mutate(payload, update_rules, True)
 
@@ -111,5 +115,9 @@ class ReconciliationService:
 
     def export(self, payload):
         ledger, _ = self.current(payload)
-        directory = export_ledger(ledger_view(ledger, self.config), self.root / self.config["report_dir"], self.config["statuses"], month_field(payload))
-        return {"directory": str(directory.resolve()), "files": [{"name": p.name, "url": "/reports/" + directory.name + "/" + p.name} for p in directory.iterdir()]}
+        with self.store.exclusive():
+            if self.store.load()["revision"] != ledger["revision"]:
+                raise ValueError("账本已更新，请刷新后重新导出")
+            directory = export_ledger(ledger_view(ledger, self.config), self.root / self.config["report_dir"], self.config["statuses"], month_field(payload))
+        prefix = self.config.get("report_url_prefix", "/reports/")
+        return {"directory": str(directory.resolve()), "files": [{"name": p.name, "url": prefix + directory.name + "/" + p.name} for p in directory.iterdir()]}

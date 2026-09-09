@@ -4,9 +4,11 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlsplit, unquote, parse_qs
 from .input_validation import json_object
 from .ledger_validation import LedgerCorruptionError
+from .request_router import RequestRouter
 
 
 def make_server(service, host, port):
+    router = RequestRouter(service)
     class Handler(BaseHTTPRequestHandler):
         def setup(self):
             super().setup()
@@ -52,20 +54,17 @@ def make_server(service, host, port):
             route = unquote(urlsplit(self.path).path)
             if "\x00" in route:
                 raise ValueError("请求路径无效")
-            if route == "/api/bootstrap":
-                with service.lock:
-                    return self.respond(service.bootstrap())
-            if route == "/api/ledger":
-                query = parse_qs(urlsplit(self.path).query)
-                with service.lock:
-                    return self.respond(service.ledger({"month": query.get("month", [""])[0], "unfinished": query.get("unfinished", [""])[0] == "1"}))
-            if route.startswith("/reports/"):
-                base = (service.root / service.config["report_dir"]).resolve()
-                path = (base / route[len("/reports/"):]).resolve()
-            else:
-                base = (service.root / "web").resolve()
-                path = (base / ("index.html" if route == "/" else route.lstrip("/"))).resolve()
-            if not path.is_relative_to(base) or not path.is_file():
+            query = parse_qs(urlsplit(self.path).query, keep_blank_values=True)
+            if any(len(values) != 1 for values in query.values()):
+                raise ValueError("查询参数不能重复")
+            payload = {key: values[0] for key, values in query.items()}
+            if "unfinished" in payload:
+                payload["unfinished"] = payload["unfinished"] == "1"
+            result = router.get(route, payload)
+            if result is not None:
+                return self.respond(result)
+            path = router.file(route)
+            if path is None:
                 return self.respond({"error": "文件不存在"}, 404)
             body = path.read_bytes()
             self.send_response(200)
@@ -91,18 +90,9 @@ def make_server(service, host, port):
                 if len(content) != size:
                     raise ValueError("请求内容未传输完整，请重新提交")
                 payload = json_object(content)
-                actions = {"/api/import": service.import_files, "/api/review": service.review, "/api/undo": service.undo, "/api/settings": service.settings, "/api/export": service.export, "/api/restore": service.restore, "/api/ledger": service.ledger, "/api/conflict": service.resolve, "/api/exception": service.exception, "/api/exclusion": service.exclusion}
-                actions["/api/invoice-difference"] = service.invoice_difference
-                actions["/api/bank-note"] = service.bank_note
-                actions["/api/expense-category"] = service.expense_category
-                actions["/api/expense-statistics"] = service.expense_statistics
-                actions["/api/conflict-undo"] = service.reverse_conflict
-                actions["/api/exception-undo"] = service.reverse_exception
-                action = actions.get(self.path)
-                if not action:
+                result = router.post(self.path, payload)
+                if result is None:
                     return self.respond({"error": "接口不存在"}, 404)
-                with service.lock:
-                    result = action(payload)
                 self.respond(result)
             except LedgerCorruptionError as exc:
                 self.respond({"error": str(exc)}, 503)

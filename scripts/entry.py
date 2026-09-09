@@ -7,9 +7,11 @@ def main():
     root = Path(__file__).resolve().parents[1]
     targets = {"server": root / "run.py", "launch": root / "scripts" / "launch_service.py", "check": root / "scripts" / "self_check.py",
                "test": root / "scripts" / "run_tests.py", "data": root / "scripts" / "data_transfer.py",
-               "import": root / "scripts" / "import_files.py", "migrate": root / "scripts" / "migrate_ledger.py"}
+               "import": root / "scripts" / "import_files.py", "migrate": root / "scripts" / "migrate_ledger.py",
+               "browser-check": root / "scripts" / "verify_company_browser.py",
+               "invoice-browser-check": root / "scripts" / "verify_invoice_browser.py"}
     if len(sys.argv) < 2 or sys.argv[1] not in targets:
-        raise SystemExit("请选择 server、check、test、data、import 或 migrate")
+        raise SystemExit("请选择 server、check、test、data、import、migrate、browser-check 或 invoice-browser-check")
     target = targets[sys.argv[1]]
     sys.dont_write_bytecode = True
     sys.path[:0] = [str(target.parent), str(root)]

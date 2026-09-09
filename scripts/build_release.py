@@ -18,7 +18,7 @@ def main():
         raise SystemExit("请先提交需交付的文件，再构建软件包；业务数据应保持被忽略")
     commit = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=root, text=True).strip()
     names = subprocess.check_output(["git", "ls-tree", "-r", "--name-only", "-z", "HEAD"], cwd=root).decode("utf-8").strip("\x00").split("\x00")
-    forbidden = ("ledger/", "sessions/", "reports/", "backups/", "temp/", "data-transfer/", "output/")
+    forbidden = ("ledger/", "company-data/", "sessions/", "reports/", "backups/", "temp/", "data-transfer/", "output/")
     if any(name.startswith(forbidden) or name.endswith((".xls", ".xlsx", ".csv")) for name in names):
         raise SystemExit("发现业务数据被 Git 跟踪，停止生成软件包")
     archive_path = destination / ("xunwen-reconcile-windows-offline-" + commit[:8] + ".zip")

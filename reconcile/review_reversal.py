@@ -1,6 +1,7 @@
 from copy import deepcopy
 from .audit import timestamp, record_event
 from .allocations import require_note
+from .invoice_selection import preserve_invoice_selection
 
 
 def accepted_version(conflict):
@@ -37,6 +38,8 @@ def reverse_conflict(ledger, payload):
             for field in ("manual_note", "manual_note_updated_at", "expense_classification"):
                 if field in current:
                     restored[field] = deepcopy(current[field])
+        else:
+            preserve_invoice_selection(current, restored)
         current.clear()
         current.update(restored)
         # 后续版本已撤回时，使前一项决定仍可按倒序撤回。

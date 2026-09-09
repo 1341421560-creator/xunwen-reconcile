@@ -16,10 +16,13 @@ def describe_expense(bank, categories):
         return {"expense_category": override["category"], "expense_category_reason": "人工分类" + ("：" + override["note"] if override["note"] else "")}
     hits = [(item, next((word for word in item["keywords"] if word in bank["summary"]), "")) for item in categories]
     hits = [(item, word) for item, word in hits if word]
+    if hits:
+        priority = max(item.get("priority", 0) for item, _ in hits)
+        hits = [(item, word) for item, word in hits if item.get("priority", 0) == priority]
     if len(hits) == 1:
         item, word = hits[0]
         return {"expense_category": item["id"], "expense_category_reason": "摘要命中：" + word}
-    reason = "摘要同时命中多个类别，请手工确认" if hits else "摘要未命中分类关键词"
+    reason = "摘要同时命中多个最高优先级类别，请手工确认" if hits else "摘要未命中分类关键词"
     return {"expense_category": "other", "expense_category_reason": reason}
 
 

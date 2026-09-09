@@ -6,16 +6,17 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from reconcile.config import load_config
-from reconcile.service import ReconciliationService
+from reconcile.company_registry import CompanyRegistry
 
 
 def main():
     parser = argparse.ArgumentParser(description="累计导入流水或发票并导出结果")
     parser.add_argument("--bank")
     parser.add_argument("--invoices")
+    parser.add_argument("--company", default="moderate", help="已启用公司的固定标识")
     args = parser.parse_args()
     root = Path(__file__).resolve().parents[1]
-    service = ReconciliationService(root, load_config(root))
+    service = CompanyRegistry(root, load_config(root)).get(args.company)
     payload = {"revision": service.ledger()["revision"]}
     for key, value in (("bank", args.bank), ("invoice", args.invoices)):
         if value:

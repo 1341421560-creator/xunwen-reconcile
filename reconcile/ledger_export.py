@@ -34,6 +34,7 @@ def export_ledger(view, root, labels, month=""):
     conflicts = [c for c in view["conflicts"] if not month or set(c["record_ids"]) & (bids if c["kind"] == "bank" else iids)]
     conflict_ids = {c["id"] for c in conflicts}
     audit = [a for a in view["audit"] if not month or a.get("bank_id") in bids or a.get("invoice_id") in iids
+             or set(a.get("invoice_ids", [])) & iids
              or set(a.get("allocation_ids", [])) & allocation_ids or a.get("batch_id") in batch_ids
              or a.get("conflict_id") in conflict_ids or a["action"] in ("settings", "migration")]
     stats = statistics(banks, invoices, {"statuses": labels})

@@ -53,6 +53,9 @@ def read_archive(archive_path, company_name):
             indexed = {r["path"]: r for r in records}
             if len(indexed) != len(records) or set(indexed) != set(names) - {"manifest.json"} or LEDGER_PATH not in indexed:
                 raise ValueError("迁移包文件清单不一致")
+            folded = {name.casefold() for name in indexed}
+            if any(parent.as_posix().casefold() in folded for name in indexed for parent in PurePosixPath(name).parents):
+                raise ValueError("迁移包存在文件与父目录路径冲突")
             content = {}
             for entry in entries:
                 if entry.filename == "manifest.json":

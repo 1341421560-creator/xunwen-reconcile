@@ -48,7 +48,9 @@ class BankFeatureTests(FaultCase):
         result = self.service.expense_statistics({"start_date": "2026-08-01", "end_date": "2026-08-31"})
         self.assertEqual(result["debit_cents"], 60000)
         self.assertEqual(result["count"], 3)
-        self.assertEqual([item["debit_cents"] for item in result["categories"]], [10000, 20000, 30000, 0, 0])
+        expected = {"goods": 10000, "logistics": 20000, "labor": 30000}
+        self.assertEqual({item["id"]: item["debit_cents"] for item in result["categories"]},
+                         {item["id"]: expected.get(item["id"], 0) for item in self.config["expense_categories"]})
         self.assertEqual(self.service.expense_statistics({})["debit_cents"], 150000)
         self.assertEqual(self.saved(), before)
 

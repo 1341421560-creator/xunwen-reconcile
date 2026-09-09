@@ -40,8 +40,10 @@ export function createExpenseStatistics(state,request){
  function onLedger(){
   el('expense-category-filter').innerHTML='<option value="all">全部类别</option>'+state.result.expense_categories.map(item=>`<option value="${esc(item.id)}">${esc(item.label)}</option>`).join('');
   el('expense-category-filter').value=category;
-  el('expense-rule-help').textContent=state.result.expense_categories.filter(item=>item.keywords.length).map(item=>`${item.label}：${item.keywords.join('、')}`).join('；')+'。未命中或同时命中多个类别时归为其他支出，可手工更正。';
+  const preferred=state.result.expense_categories.filter(item=>(item.priority||0)>0).map(item=>item.label).join('、');
+  el('expense-rule-help').textContent=state.result.expense_categories.filter(item=>item.keywords.length).map(item=>`${item.label}：${item.keywords.join('、')}`).join('；')+'。按摘要包含关键词分类；'+(preferred?`${preferred}优先于其他自动类别；`:'')+'人工分类优先。未命中或同时命中多个最高优先级类别时归为其他支出，可手工更正。';
   refresh();
  }
- return {bind,refresh,onLedger};
+ function reset(){sequence++;result=null;page=0;category='all';party='';el('expense-form').reset();el('expense-content').hidden=true;el('expense-error').textContent='';el('expense-company-options').innerHTML='';}
+ return {bind,refresh,onLedger,reset};
 }

@@ -3,6 +3,7 @@ from .invoice_difference import validate_difference
 from .summary_exclusions import normalize_keywords
 from .bank_notes import validate_bank_note
 from .expense_categories import validate_expense_override
+from .invoice_selection import validate_invoice_selection
 
 
 class LedgerCorruptionError(ValueError):
@@ -21,6 +22,7 @@ def validate_ledger(ledger):
         _require(isinstance(ledger.get(field), list), f"账本 {field} 结构无效")
     company = ledger.get("company")
     _require(isinstance(company, dict) and isinstance(company.get("id"), str) and bool(company["id"]) and isinstance(company.get("name"), str) and bool(company["name"]), "账本公司结构无效")
+    _require("key" not in company or isinstance(company["key"], str) and bool(company["key"]), "账本公司标识无效")
     settings = ledger.get("settings")
     _require(isinstance(settings, dict) and isinstance(settings.get("aliases"), dict) and type(settings.get("exclude_special")) is bool, "账本规则结构无效")
     _require(all(isinstance(k, str) and isinstance(v, str) and k.strip() and v.strip() for k, v in settings["aliases"].items()), "账本名称映射无效")
@@ -48,6 +50,7 @@ def validate_ledger(ledger):
                 _require(type(debit) is int and type(credit) is int and debit >= 0 and credit >= 0 and debit+credit == row["amount_cents"] and row["amount_cents"] > 0, "付款原金额与借贷金额不一致")
                 _require((row.get("direction") == "支出" and debit > 0 and credit == 0) or (row.get("direction") == "收入" and credit > 0 and debit == 0), "付款方向无效")
             else:
+                validate_invoice_selection(row)
                 _require(type(row.get("red")) is bool and isinstance(row.get("invalid"), str), "发票异常状态无效")
                 _require(row["amount_cents"] >= 0 or row["red"], "负金额发票未标为红字")
                 if "difference" in row:

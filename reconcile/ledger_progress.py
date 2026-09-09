@@ -27,6 +27,7 @@ def progress(ledger, config):
                 (bm if c["kind"] == "bank" else im)[rid]["hold_reasons"].append("来源版本冲突待核对" if c["type"] == "version" else "缺少银行流水号，疑似重复待核对")
     exceptions = defaultdict(list)
     for i in invoices:
+        i["include_in_total"] = i.get("include_in_total", True)
         i["remaining_cents"] = max(i["amount_cents"], 0) - i["allocated_cents"]
         has_conflict = bool(i["hold_reasons"])
         if i.get("red") or i.get("invalid"):
@@ -124,4 +125,5 @@ def ledger_view(ledger, config, month="", unfinished=False):
                 allocations=ledger["allocations"], conflicts=ledger["conflicts"], audit=ledger["audit"],
                 settings=ledger["settings"], saved_at=ledger["saved_at"], schema_version=ledger["schema_version"],
                 difference_labels=config["difference_statuses"], manual_note_max_length=config["manual_note_max_length"],
-                expense_categories=config["expense_categories"])
+                expense_categories=config["expense_categories"], invoice_page_size=config.get("invoice_page_size", 100),
+                invoice_months=sorted({invoice["date"][:7] for invoice in invoices}, reverse=True))

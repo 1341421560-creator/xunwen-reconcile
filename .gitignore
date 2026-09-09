@@ -1,5 +1,6 @@
 # 本机账本、业务附件和测试产物不进入版本库。
 /ledger/
+/company-data/
 /sessions/
 /reports/
 /backups/

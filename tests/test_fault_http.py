@@ -30,6 +30,8 @@ class HttpFaults(FaultCase):
         (self.directory / "http-server.log").write_text(self.log.getvalue(), encoding="utf-8")
 
     def call(self, route="/api/bootstrap", payload=None, method=None, headers=None, raw=None):
+        if isinstance(payload, dict):
+            payload = {"company_key": "moderate", **payload}
         client = http.client.HTTPConnection("127.0.0.1", self.port, timeout=3)
         body = raw if raw is not None else json.dumps(payload).encode("utf-8") if payload is not None else None
         h = {"Content-Type": "application/json", **(headers or {})}

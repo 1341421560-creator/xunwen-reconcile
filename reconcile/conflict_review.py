@@ -2,6 +2,7 @@ from copy import deepcopy
 from .audit import timestamp, record_event
 from .allocations import require_note
 from .identity_dedup import add_record
+from .invoice_selection import preserve_invoice_selection
 
 
 def resolve_conflict(ledger, payload):
@@ -28,6 +29,8 @@ def resolve_conflict(ledger, payload):
             for field in ("manual_note", "manual_note_updated_at", "expense_classification"):
                 if field in old:
                     replacement[field] = old[field]
+        else:
+            preserve_invoice_selection(old, replacement)
         old.clear()
         old.update(replacement)
         conflict["resolved_record_version"] = replacement["record_version"]
