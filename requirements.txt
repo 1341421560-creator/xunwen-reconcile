@@ -1,3 +1,4 @@
 xlrd==2.0.2
 openpyxl==3.1.5
 et-xmlfile==2.0.0
+pypdf==6.18.0

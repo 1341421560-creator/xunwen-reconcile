@@ -12,4 +12,8 @@ def load_config(root):
     if not formats.exists():
         formats = Path(__file__).resolve().parents[1] / "config" / "bank_formats.json"
     config["bank_formats"] = json.loads(formats.read_text(encoding="utf-8"))
+    pdf = Path(root) / "config" / "pdf_import.json"
+    if not pdf.exists():
+        pdf = Path(__file__).resolve().parents[1] / "config" / "pdf_import.json"
+    config["pdf_import"] = json.loads(pdf.read_text(encoding="utf-8"))
     return config

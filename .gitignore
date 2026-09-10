@@ -16,6 +16,7 @@ venv/
 *.log
 *.xls
 *.xlsx
+*.pdf
 *.csv
 *.zip
 # 离线运行包必须随代码一起提交。

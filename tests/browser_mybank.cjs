@@ -17,7 +17,7 @@ async function main(){
   await page.goto(url,{waitUntil:'networkidle'});await page.locator('#page-bank').waitFor({state:'visible'});
   await select('haisi');await page.locator('#import-open').click();
   const text=await page.locator('#import-dialog').innerText();assert.ok(text.includes('交通银行')&&text.includes('网商银行'));
-  await page.screenshot({path:path.join(directory,'mybank-import.png'),fullPage:true});
+  await page.screenshot({path:path.join(directory,'bank-import.png'),fullPage:true});
   await page.locator('[data-close="import-dialog"]').click();
   await importFile();await page.locator('#import-dialog').waitFor({state:'hidden'});
   assert.match(await page.locator('#ledger-total').innerText(),new RegExp(expected.count+' 笔流水'));
@@ -38,16 +38,23 @@ async function main(){
   check('月份只筛选显示；重复导入原文件只新增来源，流水笔数和稳定编号保持不变');
   await page.locator('[data-page="history"]').click();
   await page.locator('#batch-list .source-details').first().locator('summary').click();
-  const history=await page.locator('#batch-list').innerText();assert.ok(history.includes('识别为网商银行'));
+  const history=await page.locator('#batch-list').innerText();assert.ok(history.includes('识别为'+(expected.format_label||'网商银行')));
   assert.ok(history.includes('笔数 '+expected.credit_count+' / '+expected.credit_count));
   assert.ok(history.includes('笔数 '+expected.debit_count+' / '+expected.debit_count));
-  await page.screenshot({path:path.join(directory,'mybank-controls.png'),fullPage:true});
+  await page.screenshot({path:path.join(directory,'bank-controls.png'),fullPage:true});
   check('导入历史显示银行格式、收支方向说明及金额和笔数校验');
   await page.locator('[data-page="expenses"]').click();await page.locator('#expense-content').waitFor({state:'visible'});
   await page.locator('#expense-all-time').click();
   const amount=(expected.debit_cents/100).toLocaleString('zh-CN',{minimumFractionDigits:2,maximumFractionDigits:2});
   await page.waitForFunction(amount=>document.querySelector('#expense-total').textContent.includes(amount),amount);
-  check('支出统计只计入支出列，网商银行收入不计入支出');
+  check('支出统计只计入支出列，银行收入不计入支出');
+  if(expected.upload.endsWith('.pdf')){
+   const revision=(await boot('haisi')).revision;
+   await page.locator('#import-open').click();await page.locator('#invoice-file').setInputFiles(path.join(directory,expected.upload));await page.locator('#import-submit').click();
+   await page.waitForFunction(()=>document.querySelector('#import-error').textContent.includes('进项发票请选择'));
+   assert.equal((await boot('haisi')).revision,revision);await page.locator('[data-close="import-dialog"]').click();
+   check('PDF 放入发票入口时明确提示选择 Excel，账本版本保持不变');
+  }
   await select('moderate');const before=await boot('moderate');await importFile();
   await page.waitForFunction(()=>document.querySelector('#import-error').textContent.includes('当前公司'));
   const after=await boot('moderate');

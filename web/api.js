@@ -15,8 +15,9 @@ export async function request(path, payload) {
   return data;
 }
 
-export function readUpload(file) {
-  if (!file || !/\.xlsx?$/i.test(file.name)) throw new Error('请选择 .xls 或 .xlsx 文件');
+export function readUpload(file, kind='invoice') {
+  const supported=kind==='bank'?/\.(xlsx?|pdf)$/i:/\.xlsx?$/i;
+  if (!file || !supported.test(file.name)) throw new Error(kind==='bank'?'请选择 .xls、.xlsx 或交通银行电子 .pdf 对账单':'进项发票请选择 .xls 或 .xlsx 清单');
   if (!file.size || file.size > 20 * 1024 * 1024) throw new Error('每个文件必须大于 0 且不超过 20 MB');
   return new Promise((resolve, reject) => {
     const reader = new FileReader();

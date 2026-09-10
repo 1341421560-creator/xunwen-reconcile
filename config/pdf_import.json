@@ -1,0 +1,14 @@
+{
+  "max_pages": 200,
+  "max_stream_bytes_per_page": 8388608,
+  "max_stream_bytes_total": 83886080,
+  "max_text_parts_per_page": 50000,
+  "max_path_segments_per_page": 100000,
+  "geometry_tolerance": 0.8,
+  "bocom": {
+    "required_columns": ["序号", "交易日期", "借方发生额", "贷方发生额", "余额", "对方户名", "摘要", "流水号"],
+    "identity_labels": ["账号", "户名", "币种", "年份", "月份", "页码"],
+    "control_labels": ["当前账单借方发生数", "当前账单贷方发生数", "本月累计借方发生数", "本月累计贷方发生数", "本月累计借方发生额", "本月累计贷方发生额"],
+    "carry_labels": ["承前", "承上页", "过次", "转下页"]
+  }
+}
