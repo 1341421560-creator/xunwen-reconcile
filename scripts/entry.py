@@ -9,9 +9,10 @@ def main():
                "test": root / "scripts" / "run_tests.py", "data": root / "scripts" / "data_transfer.py",
                "import": root / "scripts" / "import_files.py", "migrate": root / "scripts" / "migrate_ledger.py",
                "browser-check": root / "scripts" / "verify_company_browser.py",
+               "mybank-browser-check": root / "scripts" / "verify_mybank_browser.py",
                "invoice-browser-check": root / "scripts" / "verify_invoice_browser.py"}
     if len(sys.argv) < 2 or sys.argv[1] not in targets:
-        raise SystemExit("请选择 server、check、test、data、import、migrate、browser-check 或 invoice-browser-check")
+        raise SystemExit("请选择 server、check、test、data、import、migrate、browser-check、mybank-browser-check 或 invoice-browser-check")
     target = targets[sys.argv[1]]
     sys.dont_write_bytecode = True
     sys.path[:0] = [str(target.parent), str(root)]

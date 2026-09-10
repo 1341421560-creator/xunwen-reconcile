@@ -2,8 +2,9 @@ import base64
 import hashlib
 from pathlib import Path
 from .excel_reader import read_sheets
-from .parsers import parse_bank, parse_invoices
-from .company_identity import bank_identity, verify_invoice_company
+from .parsers import parse_invoices
+from .company_identity import verify_invoice_company
+from .bank_import import read_bank
 
 
 def read_uploads(payload, config):
@@ -23,12 +24,7 @@ def read_uploads(payload, config):
             raise ValueError(f"每个文件必须大于 0 且不超过 {config['max_upload_mb']} MB")
         sheets = read_sheets(content, name, config["max_rows"])
         if key == "bank":
-            identities = bank_identity(sheets, config)
-            rows, notes, controls = parse_bank(sheets, name, config)
-            for row in rows:
-                row.update(identities[row["sheet"]], duplicate=False)
-            if any(not c["passed"] for c in controls):
-                raise ValueError("银行借贷合计与页脚控制数不符，请核对完整文件；整次导入取消")
+            rows, notes, controls = read_bank(sheets, name, config)
             parsed["bank"] = rows
             parsed["controls"] = controls
         else:

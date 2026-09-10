@@ -1,11 +1,17 @@
 import re
 from .normalize import text, name_key, currency_key
 from .parsers import find_header
+from .bank_formats import bank_format
+from .mybank_headers import mybank_identity
 
 
 def bank_identity(sheets, config):
     identities = {}
     for sheet in sheets:
+        format_id, _ = bank_format(sheet, config)
+        if format_id == "mybank":
+            identities[sheet["name"]] = mybank_identity(sheet, config)
+            continue
         header, _ = find_header(sheet["rows"], config["bank_columns"], ("date", "party", "debit", "credit"))
         if header is None:
             if any(any(text(c) for c in row) for row in sheet["rows"]):

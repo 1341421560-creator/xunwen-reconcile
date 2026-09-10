@@ -1,0 +1,23 @@
+{
+  "mybank": {
+    "label": "网商银行",
+    "title_markers": ["浙江网商银行企业账户交易明细", "网商银行企业账户交易明细"],
+    "layout_prefixes": ["浙江网商银行企业账户交易明细", "网商银行企业账户交易明细", "企业名称", "企业账号", "借方交易笔数", "贷方交易笔数", "借方交易金额", "贷方交易金额"],
+    "columns": {
+      "date": ["交易时间"],
+      "party": ["对方户名"],
+      "debit": ["贷方金额(支)"],
+      "credit": ["借方金额(收)"],
+      "summary": ["备注"],
+      "reference": ["账务流水号"],
+      "balance": ["余额"],
+      "bank": ["对方机构"],
+      "type": ["交易名称"]
+    },
+    "identity_labels": {"company": "企业名称", "account": "企业账号"},
+    "controls": [
+      {"type": "credit", "label": "收入", "amount_label": "借方交易金额", "count_label": "借方交易笔数"},
+      {"type": "debit", "label": "支出", "amount_label": "贷方交易金额", "count_label": "贷方交易笔数"}
+    ]
+  }
+}
