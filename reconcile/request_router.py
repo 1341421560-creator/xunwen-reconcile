@@ -1,6 +1,7 @@
 from pathlib import Path
 from .company_profiles import DEFAULT_COMPANY, company_profile, safe_company_path
 from .company_registry import CompanyRegistry
+from .company_name_correction import correction_availability, correct_company_name
 
 
 ACTIONS = {
@@ -35,6 +36,7 @@ class RequestRouter:
             service = self.registry.get(key)
             with service.lock:
                 result = service.bootstrap()
+                result["company_name_correction"] = correction_availability(service, service.store.load())
             result["result"]["company_key"] = key
         else:
             result = {"app_name": self.config["app_name"], "statuses": self.config["statuses"], "history": [], "result": None}
@@ -51,6 +53,10 @@ class RequestRouter:
         return None
 
     def post(self, route, payload):
+        if route == "/api/companies/correct-name":
+            self.key(payload, required=True)
+            correction = correct_company_name(self.registry, payload)
+            return dict(self.bootstrap(payload), name_correction=correction)
         if route == "/api/companies/activate":
             self.registry.activate(payload)
             return self.bootstrap(payload)

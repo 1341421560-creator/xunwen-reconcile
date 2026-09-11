@@ -13,19 +13,22 @@ import {createCompanyContext} from './company-context.js';
 import {createCompanySwitcher} from './company-switcher.js';
 import {createInvoiceSelection} from './invoice-selection.js';
 import {installSaveGuard} from './save-guard.js';
+import {createCompanyNameEditor} from './company-name-editor.js';
 
 export function createController(state){
  let importRevision=0,refreshAttempt=0,initializing=true;
- const context=createCompanyContext(transport,{storage:window.sessionStorage,onBusy:busy=>{state.companySaving=busy;for(const control of document.querySelectorAll('[data-invoice-select],#invoice-select-all'))control.disabled=busy||state.invoiceSelectionNeedsRefresh;el('company-select').disabled=busy;el('company-activate-submit').disabled=busy;}});
+ const context=createCompanyContext(transport,{storage:window.sessionStorage,onBusy:busy=>{state.companySaving=busy;for(const control of document.querySelectorAll('[data-invoice-select],#invoice-select-all'))control.disabled=busy||state.invoiceSelectionNeedsRefresh;el('company-select').disabled=busy;el('company-activate-submit').disabled=busy;el('company-name-open').disabled=busy;}});
  const request=context.request;
  const switcher=createCompanySwitcher(context,switchCompany,activate);
+ const nameEditor=createCompanyNameEditor(state,context,{mayDiscard:switcher.mayDiscard,onSaved:data=>{switcher.clear();acceptBootstrap(data);page(state,'bank');message(data.name_correction.changed?`公司全称已更正为“${data.company_profile.legal_name}”。更正前备份：${data.name_correction.backup.path}`:'公司全称未变化。');}});
  const reportError=error=>{if(!error.silent)message(error.message,true);};
  const expenseStats=createExpenseStatistics(state,request);
  const invoiceSelection=createInvoiceSelection(state,context,{apply,render:()=>renderTables(state)});
- function setReady(enabled){for(const control of document.querySelectorAll('[data-page],#import-open,#export-open,#month,#unfinished,#bank-search,#invoice-search,#invoice-month,[data-invoice-select],#invoice-select-all,#invoice-filter,#difference-filter,#settings-form input,#settings-form textarea,#settings-form button,[data-pager],[data-bank],[data-invoice]'))control.disabled=!enabled;}
- function render(){switcher.preserveSettings(()=>renderLedger(state));}
+ function setReady(enabled){for(const control of document.querySelectorAll('[data-page],#import-open,#export-open,#company-name-open,#month,#unfinished,#bank-search,#invoice-search,#invoice-month,[data-invoice-select],#invoice-select-all,#invoice-filter,#difference-filter,#settings-form input,#settings-form textarea,#settings-form button,[data-pager],[data-bank],[data-invoice]'))control.disabled=!enabled;}
+ function render(){switcher.preserveSettings(()=>renderLedger(state));nameEditor.render();}
+ function acceptBootstrap(data){switcher.render(data);state.labels=data.statuses;state.history=data.history;state.companyNameCorrection=data.company_name_correction;apply(data.result);}
  function apply(result){if(result.company_key!==context.key)return;if(state.result&&result.revision<state.result.revision)return;state.result=result;invoiceSelection.onLedger();setReady(true);if(state.month&&!result.months.includes(state.month))state.month='';render();switcher.preserveReview(()=>renderConflicts(state,boundMutate()));expenseStats.onLedger();}
- async function refresh(initial=false){const attempt=++refreshAttempt;try{if(initializing){const catalog=await transport('/api/companies');if(!catalog.companies.some(p=>p.key===context.key))context.select(catalog.default_company_key);initializing=false;}const data=await request('/api/bootstrap');if(attempt!==refreshAttempt)return;state.labels=data.statuses;state.history=data.history;switcher.render(data);if(data.setup_required){state.result=null;setReady(false);page(state,'company-setup');return;}if(initial)state.month=data.result.months[0]||'';apply(data.result);if(initial)page(state,'bank');if(data.migration_required)message('旧数据尚未迁移，请先运行迁移脚本。当前账本暂不接收导入。',true);}catch(error){if(attempt!==refreshAttempt)return;setReady(false);throw error;}}
+ async function refresh(initial=false){const attempt=++refreshAttempt;try{if(initializing){const catalog=await transport('/api/companies');if(!catalog.companies.some(p=>p.key===context.key))context.select(catalog.default_company_key);initializing=false;}const data=await request('/api/bootstrap');if(attempt!==refreshAttempt)return;state.labels=data.statuses;state.history=data.history;state.companyNameCorrection=data.company_name_correction;switcher.render(data);if(data.setup_required){state.result=null;nameEditor.render();setReady(false);page(state,'company-setup');return;}if(initial)state.month=data.result.months[0]||'';apply(data.result);if(initial)page(state,'bank');if(data.migration_required)message('旧数据尚未迁移，请先运行迁移脚本。当前账本暂不接收导入。',true);}catch(error){if(attempt!==refreshAttempt)return;setReady(false);throw error;}}
  function boundMutate(){const scope=context.capture();return (path,payload,close=true)=>mutate(path,payload,close,scope);}
  async function mutate(path,payload,close=true,scope=context.capture()){const result=await scope.request(path,payload);if(close&&el('detail-dialog').open)el('detail-dialog').close();if(path==='/api/settings')switcher.saved();switcher.savedRecord(path,payload);apply(result);message(path==='/api/bank-note'?'备注已保存到当前公司账本，重启后继续保留。':'已保存到账本，金额进度已更新。');}
  async function switchCompany(key){
@@ -35,12 +38,12 @@ export function createController(state){
   try{await refresh(true);}catch(error){reportError(error);}
  }
  async function activate(legal_name){
-  el('company-activate-error').textContent='';try{const data=await request('/api/companies/activate',{legal_name});switcher.clear();switcher.render(data);state.labels=data.statuses;state.history=data.history;apply(data.result);page(state,'bank');message('公司账本已启用，可以导入对应公司的文件。');}
+  el('company-activate-error').textContent='';try{const data=await request('/api/companies/activate',{legal_name});switcher.clear();acceptBootstrap(data);page(state,'bank');message('公司账本已启用，可以导入对应公司的文件。');}
   catch(error){if(!error.silent)el('company-activate-error').textContent=error.message;}
  }
  function openImport(){importRevision=state.result.revision;el('import-form').reset();el('import-error').textContent='';el('import-dialog').showModal();}
  function bind(){
-  setReady(false);expenseStats.bind();switcher.bind();invoiceSelection.bind();installSaveGuard(window,()=>context.busy);page(state,'company-loading');
+  setReady(false);expenseStats.bind();switcher.bind();nameEditor.bind();invoiceSelection.bind();installSaveGuard(window,()=>context.busy);page(state,'company-loading');
   document.addEventListener('click',async e=>{const target=e.target.closest('button');if(!target)return;try{
    if(target.dataset.page){page(state,target.dataset.page);expenseStats.refresh();}
    if(target.dataset.bankNote)openBankNote(state.result,target.dataset.bankNote,boundMutate());

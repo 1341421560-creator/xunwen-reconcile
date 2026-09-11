@@ -80,6 +80,10 @@ class CompanyRegistry:
             safe_company_path(self.root, self.root / config[field])
         return ReconciliationService(self.root, config)
 
+    def invalidate(self, key):
+        with self._guard:
+            self._services.pop(key, None)
+
     def activate(self, payload):
         key, name = payload.get("company_key"), payload.get("legal_name")
         company_profile(self.config, key)
