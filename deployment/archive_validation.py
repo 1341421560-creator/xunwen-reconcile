@@ -26,8 +26,7 @@ def check_member(name):
     for part in path.parts:
         if re.search(r'[<>:"|?*\x00-\x1f]', part) or part.endswith((" ", ".")) or re.fullmatch(r"(?i)(con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\..*)?", part):
             raise ValueError("迁移包包含无效 Windows 文件名")
-    if (path.parts[0] == "ledger" and name != LEDGER_PATH
-            and not re.fullmatch(r"ledger/name-correction-backups/before-[0-9a-f]{32}\.json", name)):
+    if path.parts[0] == "ledger" and name != LEDGER_PATH:
         raise ValueError("迁移包包含未知账本文件")
     return path
 
@@ -73,14 +72,6 @@ def read_archive(archive_path, company_name):
             validate_ledger(ledger)
             if name_key(ledger["company"]["name"]) != name_key(company_name) or ledger["revision"] != manifest["revision"]:
                 raise ValueError("迁移包账本公司或版本不符")
-            for name, value in content.items():
-                if name.startswith("ledger/name-correction-backups/"):
-                    snapshot = json.loads(value)
-                    validate_ledger(snapshot)
-                    if (snapshot["company"]["id"] != ledger["company"]["id"]
-                            or snapshot["company"].get("key") != ledger["company"].get("key")
-                            or snapshot["revision"] > ledger["revision"]):
-                        raise ValueError("更正前备份与当前账本身份或版本不符")
             return manifest, content
     except (zipfile.BadZipFile, KeyError, TypeError, AttributeError, UnicodeError) as exc:
         raise ValueError("迁移包损坏或格式不完整：" + str(exc)) from exc
