@@ -2,6 +2,7 @@ from copy import deepcopy
 from .audit import timestamp, record_event
 from .allocations import require_note
 from .invoice_selection import preserve_invoice_selection
+from .invoice_offset_model import require_no_offsets
 
 
 def accepted_version(conflict):
@@ -24,6 +25,8 @@ def reverse_conflict(ledger, payload):
     history = {"at": timestamp(), "note": note, "resolution": resolution,
                "previous_note": conflict.get("note", ""), "previous_resolved_at": conflict.get("resolved_at", "")}
     if resolution == "accept":
+        if conflict["kind"] == "invoices":
+            require_no_offsets(ledger, conflict["record_ids"])
         require_unallocated(ledger, conflict["kind"], conflict["record_ids"])
         old = conflict.get("previous_record")
         current = next(r for r in ledger[conflict["kind"]] if r["id"] == conflict["record_ids"][0])
@@ -75,6 +78,7 @@ def reverse_exception(ledger, payload):
     invoice = next((i for i in ledger["invoices"] if i["id"] == payload.get("invoice_id")), None)
     if invoice is None or not invoice.get("exception_review"):
         raise ValueError("该异常票没有可撤回的复核结论")
+    require_no_offsets(ledger, [invoice["id"]])
     previous = invoice["exception_review"]
     invoice.setdefault("exception_review_history", []).append({"previous": deepcopy(previous), "at": timestamp(), "note": note})
     invoice["exception_review"] = None

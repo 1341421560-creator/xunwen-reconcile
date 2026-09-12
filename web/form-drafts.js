@@ -13,7 +13,7 @@ export function createFormDrafts(){
   const values=dirty.has(form)?[...form.querySelectorAll('input,textarea')].map(input=>({id:input.id,value:input.value,checked:input.checked})):[];
   render();for(const item of values){const input=document.getElementById(item.id);if(input){input.value=item.value;input.checked=item.checked;}}
  }
- function reviewKey(card){return card.dataset.conflict?'conflict:'+card.dataset.conflict:card.dataset.exception?'exception:'+card.dataset.exception:card.querySelector('[data-difference-editor]')?.dataset.differenceEditor;}
+ function reviewKey(card){if(card.dataset.offset)return 'offset:'+card.dataset.offset;return card.dataset.conflict?'conflict:'+card.dataset.conflict:card.dataset.exception?'exception:'+card.dataset.exception:card.querySelector('[data-difference-editor]')?.dataset.differenceEditor;}
  function preserveReview(render){
   const drafts=[...dirty].filter(card=>card.isConnected&&card.classList.contains('conflict-card')).map(card=>({key:reviewKey(card),values:[...card.querySelectorAll('input,select,textarea')].map(input=>({value:input.value,checked:input.checked}))}));
   render();
@@ -23,7 +23,8 @@ export function createFormDrafts(){
  function savedRecord(path,payload){
   for(const card of dirty){
    const key=card.classList.contains('conflict-card')?reviewKey(card):null;
-   if(path==='/api/conflict'&&key==='conflict:'+payload.conflict_id||path==='/api/exception'&&key==='exception:'+payload.invoice_id||path==='/api/invoice-difference'&&key===payload.invoice_id)dirty.delete(card);
+   if(path.startsWith('/api/invoice-offset')&&key==='offset:'+payload.red_invoice_id)dirty.delete(card);
+   if(path==='/api/conflict'&&key==='conflict:'+payload.conflict_id||path==='/api/exception'&&(key==='exception:'+payload.invoice_id||key==='offset:'+payload.invoice_id)||path==='/api/exception-undo'&&key==='offset:'+payload.invoice_id||path==='/api/invoice-difference'&&key===payload.invoice_id)dirty.delete(card);
   }
  }
  return {bind,changed,preserveSettings,preserveReview,savedRecord,clear:()=>dirty.clear(),saved:form=>dirty.delete(form)};

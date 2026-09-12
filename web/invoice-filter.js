@@ -2,8 +2,9 @@ export function filterInvoices(invoices,state){
  const search=state.invoiceSearch.toLowerCase();
  return invoices.filter(invoice=>(!state.invoiceMonth||invoice.date.startsWith(state.invoiceMonth))&&
   [invoice.party,invoice.number,invoice.date,invoice.id].join(' ').toLowerCase().includes(search)&&
-  (state.invoiceFilter==='all'||state.invoiceFilter==='available'&&invoice.distributable_cents>0||state.invoiceFilter==='used'&&invoice.allocated_cents>0||state.invoiceFilter==='review'&&invoice.status==='review')&&
-  (state.differenceFilter==='all'||invoice.difference_status===state.differenceFilter));
+  (state.invoiceFilter==='all'||state.invoiceFilter==='available'&&invoice.distributable_cents>0||state.invoiceFilter==='used'&&invoice.allocated_cents>0||state.invoiceFilter==='review'&&invoice.status==='review'&&(!['linked','reviewed'].includes(invoice.offset_status)||invoice.blocking_invalid||invoice.offset_conflict))&&
+  (state.differenceFilter==='all'||invoice.difference_status===state.differenceFilter)&&
+  (!state.offsetFilter||state.offsetFilter==='all'||invoice.offset_status===state.offsetFilter));
 }
 
 export function selectionSummary(invoices){

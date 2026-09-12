@@ -12,6 +12,7 @@ def main():
                "mybank-browser-check": root / "scripts" / "verify_mybank_browser.py",
                "pdf-browser-check": root / "scripts" / "verify_pdf_browser.py",
                "invoice-browser-check": root / "scripts" / "verify_invoice_browser.py"}
+    targets["offset-browser-check"] = root / "scripts" / "verify_offset_browser.py"
     if len(sys.argv) < 2 or sys.argv[1] not in targets:
         raise SystemExit("请选择 server、check、test、data、import、migrate、browser-check、mybank-browser-check、pdf-browser-check 或 invoice-browser-check")
     target = targets[sys.argv[1]]

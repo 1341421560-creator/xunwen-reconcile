@@ -1,10 +1,10 @@
+# 冲红功能之前的真实校验器快照，仅用于验证旧程序会拒绝新版账本。
 from .identity_dedup import identity
 from .invoice_difference import validate_difference
 from .summary_exclusions import normalize_keywords
 from .bank_notes import validate_bank_note
 from .expense_categories import validate_expense_override
 from .invoice_selection import validate_invoice_selection
-from .invoice_offset_model import validate_offsets, blocking_invalid, net_capacity
 
 
 class LedgerCorruptionError(ValueError):
@@ -18,7 +18,7 @@ def _require(condition, message):
 
 def validate_ledger(ledger):
     _require(isinstance(ledger, dict), "账本根结构必须为对象")
-    _require(type(ledger.get("schema_version")) is int and ledger["schema_version"] in (1, 2) and type(ledger.get("revision")) is int and ledger["revision"] >= 0, "账本版本无效，请使用支持此账本格式的程序")
+    _require(ledger.get("schema_version") == 1 and type(ledger.get("revision")) is int and ledger["revision"] >= 0, "账本版本无效")
     for field in ("bank", "invoices", "allocations", "conflicts", "batches", "audit", "blocked_pairs", "migrations"):
         _require(isinstance(ledger.get(field), list), f"账本 {field} 结构无效")
     company = ledger.get("company")
@@ -56,7 +56,6 @@ def validate_ledger(ledger):
                 _require(row["amount_cents"] >= 0 or row["red"], "负金额发票未标为红字")
                 if "difference" in row:
                     validate_difference(row["difference"])
-    offsets = validate_offsets(ledger, maps["invoices"])
     bt, it = {}, {}
     for a in ledger["allocations"]:
         _require(a.get("bank_id") in maps["bank"] and a.get("invoice_id") in maps["invoices"], "关联记录引用不存在")
@@ -65,11 +64,11 @@ def validate_ledger(ledger):
         if a["state"] != "active":
             continue
         b, i = maps["bank"][a["bank_id"]], maps["invoices"][a["invoice_id"]]
-        _require(b["direction"] == "支出" and b["currency"] == i["currency"] and not i["red"] and not blocking_invalid(i), "有效关联方向或发票状态无效")
+        _require(b["direction"] == "支出" and b["currency"] == i["currency"] and not i["red"] and not i["invalid"], "有效关联方向或发票状态无效")
         bt[b["id"]] = bt.get(b["id"], 0) + a["amount_cents"]
         it[i["id"]] = it.get(i["id"], 0) + a["amount_cents"]
     _require(all(v <= maps["bank"][k]["amount_cents"] for k, v in bt.items()), "付款累计分配超额")
-    _require(all(v <= net_capacity(maps["invoices"][k], offsets) for k, v in it.items()), "发票累计分配超过冲红后可核销总额")
+    _require(all(v <= maps["invoices"][k]["amount_cents"] for k, v in it.items()), "发票累计分配超额")
     for c in ledger["conflicts"]:
         _require(c.get("kind") in ("bank", "invoices") and c.get("state") in ("pending", "resolved") and c.get("type") in ("version", "missing_reference"), "冲突状态无效")
         _require(isinstance(c.get("record_ids"), list) and c["record_ids"] and all(rid in maps[c["kind"]] for rid in c["record_ids"]), "冲突引用记录不存在")

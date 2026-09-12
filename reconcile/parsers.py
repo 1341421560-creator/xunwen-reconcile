@@ -131,7 +131,7 @@ def parse_invoices(sheets, filename, config, mark_duplicates=True):
             invalid = ""
             if not number or not party:
                 invalid = "缺少发票号码或销售方名称"
-            elif any(word in state for word in ("作废", "失控", "异常", "全额红冲", "已红冲")):
+            elif any(word in state for word in ("作废", "失控", "异常")):
                 invalid = f"发票状态：{state}"
             elif isinstance(value(row, mapping, "number"), (int, float)) and len(number) > 15:
                 invalid = "长发票号码为数值格式，可能已丢失精度，请将源数据恢复为文本"

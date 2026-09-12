@@ -2,6 +2,7 @@ import {escape as esc,money,el} from './format.js';
 import {renderDifferences} from './invoice-difference.js';
 import {renderRelations} from './allocation-relations.js';
 import {reviewReversal} from './review-reversal.js';
+import {renderOffsetTasks} from './invoice-offset-editor.js';
 
 function conflictCard(conflict,view){
  const resolved=conflict.state==='resolved',existing=view[conflict.kind].filter(row=>conflict.record_ids.includes(row.id));
@@ -32,10 +33,11 @@ function mountExceptions(container,exceptions,view,onMutation){
 }
 
 export function renderConflicts(state,onMutation){
- const view=state.result,pending=view.conflicts.filter(conflict=>conflict.state==='pending'),exceptions=view.invoices.filter(invoice=>invoice.red||invoice.invalid);
- const invoiceTasks=new Set([...pending.filter(conflict=>conflict.kind==='invoices').flatMap(conflict=>conflict.record_ids),...[...exceptions.filter(invoice=>!invoice.exception_review),...view.invoices.filter(invoice=>invoice.difference_blocked)].map(invoice=>invoice.id)]);
+ const view=state.result,pending=view.conflicts.filter(conflict=>conflict.state==='pending'),exceptions=view.invoices.filter(invoice=>!invoice.red&&(invoice.blocking_invalid||invoice.exception_review));
+ const invoiceTasks=new Set([...pending.filter(conflict=>conflict.kind==='invoices').flatMap(conflict=>conflict.record_ids),...[...exceptions.filter(invoice=>!invoice.exception_review),...view.invoices.filter(invoice=>invoice.difference_blocked||invoice.offset_source_hold||invoice.offset_status==='pending')].map(invoice=>invoice.id)]);
  el('conflict-count').textContent=pending.filter(conflict=>conflict.kind==='bank').length+invoiceTasks.size;
  renderDifferences(el('difference-list'),view,onMutation);
+ renderOffsetTasks(el('offset-list'),view,onMutation);
  mountConflictCards(el('conflict-list'),pending,view,onMutation);
  mountConflictCards(el('resolved-conflict-list'),view.conflicts.filter(conflict=>conflict.state==='resolved').reverse(),view,onMutation);
  mountExceptions(el('exception-list'),exceptions,view,onMutation);

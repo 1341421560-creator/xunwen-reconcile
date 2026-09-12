@@ -18,6 +18,7 @@ from .expense_categories import update_expense_category
 from .expense_statistics import expense_statistics
 from .review_reversal import reverse_conflict, reverse_exception
 from .invoice_selection import update_invoice_selection
+from .invoice_offsets import preview_offset, save_offset, undo_offset
 
 
 class ReconciliationService:
@@ -82,6 +83,16 @@ class ReconciliationService:
 
     def invoice_selection(self, payload):
         return self.mutate(payload, update_invoice_selection)
+
+    def invoice_offset_preview(self, payload):
+        ledger, _ = self.current(payload)
+        return preview_offset(ledger, payload)
+
+    def invoice_offset(self, payload):
+        return self.mutate(payload, save_offset)
+
+    def invoice_offset_undo(self, payload):
+        return self.mutate(payload, undo_offset)
 
     def settings(self, payload):
         return self.mutate(payload, update_rules, True)

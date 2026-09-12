@@ -3,6 +3,7 @@ from .audit import timestamp, record_event
 from .allocations import require_note
 from .identity_dedup import add_record
 from .invoice_selection import preserve_invoice_selection
+from .invoice_offset_model import require_no_offsets, blocking_invalid
 
 
 def resolve_conflict(ledger, payload):
@@ -16,6 +17,8 @@ def resolve_conflict(ledger, payload):
         # 来源新版本完整保存在冲突记录中，人工选择保留旧记录不丢失证据。
         pass
     elif action == "accept" and conflict["type"] == "version":
+        if conflict["kind"] == "invoices":
+            require_no_offsets(ledger, conflict["record_ids"])
         field = "bank_id" if conflict["kind"] == "bank" else "invoice_id"
         if any(a["state"] == "active" and a[field] in conflict["record_ids"] for a in ledger["allocations"]):
             raise ValueError("替换记录前必须先撤回受影响记录的全部关联")
@@ -54,8 +57,9 @@ def resolve_conflict(ledger, payload):
 def review_exception(ledger, payload):
     note = require_note(payload)
     invoice = next((i for i in ledger["invoices"] if i["id"] == payload.get("invoice_id")), None)
-    if not invoice or not (invoice.get("red") or invoice.get("invalid")):
+    if not invoice or not (invoice.get("red") or blocking_invalid(invoice)):
         raise ValueError("该发票没有可单独复核的红字或异常标记")
+    require_no_offsets(ledger, [invoice["id"]])
     if any(a["state"] == "active" and a["invoice_id"] == invoice["id"] for a in ledger["allocations"]):
         raise ValueError("请先撤回这张异常发票的全部关联")
     invoice["exception_review"] = {"at": timestamp(), "note": note}

@@ -1,6 +1,7 @@
 import hashlib
 import json
 from copy import deepcopy
+from .invoice_offset_model import blocking_invalid
 from .audit import identifier, timestamp
 from .normalize import name_key
 
@@ -16,7 +17,7 @@ def identity(row, kind):
 
 def signature(row, kind):
     fields = ("date", "party", "currency", "amount_cents", "direction", "debit_cents", "credit_cents", "summary", "type") if kind == "bank" else ("date", "party", "currency", "amount_cents", "red", "invalid", "source_status", "summary")
-    return tuple(name_key(row.get(f, "")) if f == "party" else row.get(f, "") for f in fields)
+    return tuple(name_key(row.get(f, "")) if f == "party" else blocking_invalid(row) if f == "invalid" else row.get(f, "") for f in fields)
 
 
 def source(row, batch_id):

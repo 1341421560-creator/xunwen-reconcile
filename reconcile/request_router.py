@@ -12,8 +12,11 @@ ACTIONS = {
     "/api/expense-statistics": "expense_statistics", "/api/conflict-undo": "reverse_conflict",
     "/api/exception-undo": "reverse_exception",
     "/api/invoice-selection": "invoice_selection",
+    "/api/invoice-offset/preview": "invoice_offset_preview",
+    "/api/invoice-offset": "invoice_offset",
+    "/api/invoice-offset/undo": "invoice_offset_undo",
 }
-READ_ACTIONS = {"/api/ledger", "/api/restore", "/api/expense-statistics"}
+READ_ACTIONS = {"/api/ledger", "/api/restore", "/api/expense-statistics", "/api/invoice-offset/preview"}
 
 
 class RequestRouter:
@@ -57,7 +60,7 @@ class RequestRouter:
         method = ACTIONS.get(route)
         if method is None:
             return None
-        key = self.key(payload, route not in READ_ACTIONS)
+        key = self.key(payload, route not in READ_ACTIONS or route == "/api/invoice-offset/preview")
         service = self.registry.get(key)
         with service.lock:
             result = getattr(service, method)(payload)

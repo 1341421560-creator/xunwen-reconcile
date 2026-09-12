@@ -31,7 +31,12 @@
     "pending": "差额待确认",
     "carry_forward": "已确认跨月使用",
     "amount_error": "开票金额有误",
-    "cleared": "差额已用完"
+    "cleared": "差额已用完",
+    "offset_cleared": "差额已冲销"
+  },
+  "offset_statuses": {
+    "none": "未冲红", "pending": "待对应原票", "linked": "已对应原票",
+    "reviewed": "已复核，未冲减", "partial": "部分冲红", "full": "全额冲红，不可核销"
   },
   "company_name": "深圳市摩德瑞特科技有限公司",
   "companies": [

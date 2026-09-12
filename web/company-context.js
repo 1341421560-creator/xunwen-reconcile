@@ -5,7 +5,7 @@ export class StaleCompanyResponse extends Error {
 export function createCompanyContext(transport,{storage,onBusy=()=>{}}={}){
  let key='moderate',generation=0,busy=0;
  try{key=storage?.getItem('xunwen-company')||key;}catch{}
- const reads=new Set(['/api/ledger','/api/restore','/api/expense-statistics']);
+ const reads=new Set(['/api/ledger','/api/restore','/api/expense-statistics','/api/invoice-offset/preview']);
  function current(captured){return captured.key===key&&captured.generation===generation;}
  function capture(){
   const scope={key,generation};

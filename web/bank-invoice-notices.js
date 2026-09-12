@@ -7,6 +7,7 @@ function itemNotice(item,bank){
 
 export function bankInvoiceNotices(bank){
  const notices=bank.related_invoice_notices||[];
- if(!notices.length)return '';
- return `<div class="bank-invoice-notices">${itemNotice(notices[0],bank)}${notices.length>1?`<details><summary>另有 ${notices.length-1} 张相关发票</summary>${notices.slice(1).map(item=>itemNotice(item,bank)).join('')}</details>`:''}</div>`;
+ const offsets=(bank.invoice_offset_notices||[]).map(item=>`<div class="bank-invoice-notice"><span class="subtext">${esc(item.source_label||'发票')} ${esc(item.number)} · 累计冲红 ${money(item.offset_cents)} 元 · 净额 ${money(item.net_amount_cents)} 元</span><button class="text-button" data-invoice="${esc(item.invoice_id)}">查看冲红记录</button></div>`).join('');
+ if(!notices.length&&!offsets)return '';
+ return `<div class="bank-invoice-notices">${notices.length?itemNotice(notices[0],bank):''}${notices.length>1?`<details><summary>另有 ${notices.length-1} 张相关发票</summary>${notices.slice(1).map(item=>itemNotice(item,bank)).join('')}</details>`:''}${offsets}</div>`;
 }

@@ -5,6 +5,7 @@ from .invoice_difference import describe_difference
 from .summary_exclusions import summary_rule_groups, exclusion_reason
 from .expense_categories import describe_expense
 from .invoice_notices import annotate_invoice_notices
+from .invoice_offset_view import annotate_offsets, annotate_payment_offsets
 
 
 def progress(ledger, config):
@@ -26,13 +27,16 @@ def progress(ledger, config):
             for rid in c["record_ids"]:
                 (bm if c["kind"] == "bank" else im)[rid]["hold_reasons"].append("来源版本冲突待核对" if c["type"] == "version" else "缺少银行流水号，疑似重复待核对")
     exceptions = defaultdict(list)
+    annotate_offsets(invoices, ledger)
     for i in invoices:
         i["include_in_total"] = i.get("include_in_total", True)
-        i["remaining_cents"] = max(i["amount_cents"], 0) - i["allocated_cents"]
+        i["remaining_cents"] = i["net_amount_cents"] - i["allocated_cents"]
         has_conflict = bool(i["hold_reasons"])
-        if i.get("red") or i.get("invalid"):
-            i["hold_reasons"].append("红字发票" if i.get("red") else i["invalid"])
-        if has_conflict or (i["hold_reasons"] and not i.get("exception_review")):
+        if i.get("red") or i["blocking_invalid"]:
+            i["hold_reasons"].append("红字发票不可直接核销付款" if i.get("red") else i["blocking_invalid"])
+        if i["offset_source_hold"]:
+            i["hold_reasons"].append(i["offset_source_hold"])
+        if has_conflict or i["offset_source_hold"] or (i["hold_reasons"] and not i.get("exception_review") and i["offset_status"] != "linked"):
             exceptions[(party_key(i, ledger["settings"]), i["currency"])].append(i["id"])
         i["bank_ids"] = []
         i["status"] = "review" if i["hold_reasons"] else ("matched" if i["remaining_cents"] == 0 else "partial" if i["allocated_cents"] else "unmatched")
@@ -70,7 +74,9 @@ def progress(ledger, config):
     for i in invoices:
         if i["hold_reasons"]:
             i["status"] = "review"
-        i.update(describe_difference(i, i["allocated_cents"], ledger.get("saved_at")))
+        elif i["offset_status"] == "full":
+            i["status"] = "offset_full"
+        i.update(describe_difference(i, i["allocated_cents"], ledger.get("saved_at"), capacity=i["net_amount_cents"]))
     eligible_by_party, eligible_by_amount = defaultdict(list), defaultdict(list)
     for i in invoices:
         if i["distributable_cents"] > 0 and not i["hold_reasons"] and i["status"] != "review":
@@ -97,6 +103,7 @@ def progress(ledger, config):
         else:
             b.update(status="unmatched", reason="累计账本暂未找到对应发票")
     annotate_invoice_notices(banks, invoices, ledger["allocations"], ledger["audit"], config)
+    annotate_payment_offsets(banks, invoices, ledger["allocations"], config["offset_statuses"])
     return banks, invoices
 
 
@@ -123,6 +130,7 @@ def ledger_view(ledger, config, month="", unfinished=False):
                 months=sorted({b["date"][:7] for b in banks}, reverse=True), stats=statistics(banks, invoices, config),
                 filtered_stats=statistics(filtered, invoices, config), batches=ledger["batches"],
                 allocations=ledger["allocations"], conflicts=ledger["conflicts"], audit=ledger["audit"],
+                invoice_offsets=ledger.get("invoice_offsets", []), offset_labels=config["offset_statuses"],
                 settings=ledger["settings"], saved_at=ledger["saved_at"], schema_version=ledger["schema_version"],
                 difference_labels=config["difference_statuses"], manual_note_max_length=config["manual_note_max_length"],
                 expense_categories=config["expense_categories"], invoice_page_size=config.get("invoice_page_size", 100),
